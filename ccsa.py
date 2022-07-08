@@ -138,6 +138,7 @@ class CCSA():
                 if self.check_termination():
                     return self.x
                 
+            
             # inner iterations are done
             self._make_less_conservative()
             self.outer += 1
@@ -148,12 +149,20 @@ class CCSA():
     
     def check_termination(self):
         if self.total_iters >= self.max_eval:
+            print("Reached Maximum Evaluation Limit")
             return True
+        diff = np.abs(self.y[0] - self.y_prev[0])
         #if (self.xtol_rel is not None) and (np.norm()):
         #    xtol_rel
-        if (np.abs(self.y[0] - self.y_prev[0]) / self.y[0]) < self.ftol_rel:
+        #The recursive subproblem invariably converges to self.y[0] == 0 and self.y[0] - self.y_prev[0] == 0
+        #The normal evaluation method below would give a numpy warning
+        if(diff == 0 and self.outer > 0):
+            return True
+        
+        
+        if(self.outer > 0 and (diff/ self.y_prev[0]) < self.ftol_rel):
             print(self.y[0],self.y_prev[0])
-            print("val: {} | {}".format((np.abs(self.y[0] - self.y_prev[0]) / self.y[0]),self.ftol_rel))
+            print("val: {} | {}".format((np.abs(self.y[0] - self.y_prev[0]) / self.y_prev[0]),self.ftol_rel))
             return True
         return False       
     
@@ -295,6 +304,7 @@ if __name__ == "__main__":
             grad[:] = 2*x.reshape((x.size,1))
     
     #x = np.ones((4,))
-    x = np.random.rand(4)
+    #x = np.random.rand(4)
+    x = np.asarray([1,2,3,4])
     test = CCSA(4,0,f,verbose = True,max_eval=20)
     test(x)
