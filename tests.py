@@ -1,5 +1,7 @@
 from ccsa import CCSA
 import numpy as np
+import nlopt
+from numpy import *
 
 #Test a function with a discontinuous derivative at the origin
 def test_0():
@@ -19,7 +21,7 @@ def test_0():
     test = CCSA(2,2,f,
         lb=[-np.inf,0],ub=[np.inf,np.inf],
         verbose=True,max_eval=50)
-    x0 = np.array([-1.234, 15.678])
+    x0 = np.array([1.234, 100.678])
     x = test(x0)
     print(x)
 
@@ -97,3 +99,25 @@ def test_3():
 
 if __name__ == "__main__":
     test_0()
+    opt = nlopt.opt(nlopt.LD_MMA,2)
+    def f1_nlopt(x,grad): 
+        if grad.size > 0:      
+            grad[0] = 0.0
+            grad[1] = 0.5 / np.sqrt(x[1])
+        return np.sqrt(x[1]) # objective function
+    opt.set_min_objective(f1_nlopt)
+    opt.set_lower_bounds([-np.inf,0])
+    opt.set_upper_bounds([np.inf,np.inf])
+    def ineq_consts(result,x, grad):
+        if grad.size > 0:
+            grad[0,0] = 3 * 2 * (2*x[0] + 0)**2
+            grad[0,1] = -1.0
+            grad[1,0] = 0*3 * -1 * (-1*x[0] + -1)**2
+            grad[1,1] = -1.0
+        result[0] =  (2*x[0] + 0)**3 - x[1] # constraint 1
+        result[1] = (-1*x[0] + -1)**3 - x[1] # constraint 2
+    opt.add_inequality_mconstraint(ineq_consts, [0,0])
+    opt.set_ftol_rel(0)
+    opt.set_maxeval(500)
+    xopt = opt.optimize([1.234, 100.678])
+    t = 1

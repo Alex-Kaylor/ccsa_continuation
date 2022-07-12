@@ -103,6 +103,8 @@ class CCSA():
             # evaluate the current point and gradient
             self.y_prev[:] = self.y[:]
             self.f(self.y,self.x,self.df)
+            if (~np.isfinite(self.df).all() ):
+                return self.x
             self.total_iters += 1
 
             # perform inner iterations
@@ -151,16 +153,19 @@ class CCSA():
         if self.total_iters >= self.max_eval:
             print("Reached Maximum Evaluation Limit")
             return True
+        constraints_met = np.less_equal(self.y[1:len(self.y)], 0).all()
+
         diff = np.abs(self.y[0] - self.y_prev[0])
+        
         #if (self.xtol_rel is not None) and (np.norm()):
         #    xtol_rel
         #The recursive subproblem invariably converges to self.y[0] == 0 and self.y[0] - self.y_prev[0] == 0
         #The normal evaluation method below would give a numpy warning
-        if(diff == 0 and self.outer > 0):
+        if((diff == 0 or self.y[0] == 0 ) and self.outer > 0 and constraints_met):
             return True
         
         
-        if(self.outer > 0 and (diff/ self.y_prev[0]) < self.ftol_rel):
+        if(self.outer > 0 and (diff/ self.y_prev[0]) < self.ftol_rel and constraints_met ):
             print(self.y[0],self.y_prev[0])
             print("val: {} | {}".format((np.abs(self.y[0] - self.y_prev[0]) / self.y_prev[0]),self.ftol_rel))
             return True
