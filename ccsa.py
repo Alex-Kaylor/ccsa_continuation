@@ -103,8 +103,12 @@ class CCSA():
             # evaluate the current point and gradient
             self.y_prev[:] = self.y[:]
             self.f(self.y,self.x,self.df)
-            if (~np.isfinite(self.df).all() ):
+            finite_mat = np.isfinite(self.df)
+            if (~finite_mat.all() ):
+                
+                #self.f(self.y,self.x + 0.1,self.df)
                 return self.x
+                
             self.total_iters += 1
 
             # perform inner iterations
@@ -132,6 +136,8 @@ class CCSA():
                     self.x_1[:] = self.x[:]     # rollback
                     self.x[:]   = x_hat         # only cache the update if it looks good
                 else:
+                    print("(Not conservative)")
+                    print("")
                     # we need to make our subproblem more conservative...
                     delta = self._calculate_delta(x_hat,self.y,y_hat)
                     self._make_more_conservative(delta)
@@ -239,7 +245,7 @@ class CCSA():
                 lambda y,λ,grad: self.dual(λ,y,grad,x),
                 lb=np.zeros(λ0.shape),
                 ub=np.ones(λ0.shape)*np.inf,
-                max_eval=100,
+                max_eval=10000,
                 **self.sub_solver_params
             )
             # find the lagrange multipliers that work
@@ -261,7 +267,10 @@ class CCSA():
         conservative wrt the actual ob func and constraints'''
         result = True
         y = np.asarray(y)
-        y_hat = np.asarray(y_hat)        
+        y_hat = np.asarray(y_hat)      
+        #(for testing purposes) check if y_hat_i is randomly greater than 0
+        if (len(y_hat) > 1 and (y_hat[1] > 0 or y_hat[2] > 0)):
+            pass  
         for y_i,y_hat_i in zip(y,y_hat):
             result = result & (y_hat_i >= y_i)
         return result
@@ -291,9 +300,9 @@ class CCSA():
                 else:
                     gamma = 0
                     cond = (self.x[j]-self.x_1[j])*(self.x_1[j]-self.x_2[j])
-                    if cond > 0:
+                    if cond < 0:
                         gamma = _GAMMA_DECREASE
-                    elif cond < 0:
+                    elif cond > 0:
                         gamma = _GAMMA_INCREASE
                     else:
                         gamma = 1
